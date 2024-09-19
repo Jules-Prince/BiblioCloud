@@ -4,6 +4,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
@@ -15,8 +18,9 @@ import io.vertx.sqlclient.SqlClient;
 import io.vertx.sqlclient.Tuple;
 
 public class UserService {
+    private static final Logger logger = LoggerFactory.getLogger(UserService.class);       
     private final SqlClient client;
-
+    
     public UserService(Vertx vertx, JsonObject config) {
         PgConnectOptions connectOptions = new PgConnectOptions()
             .setPort(Integer.parseInt(config.getString("db.port")))
