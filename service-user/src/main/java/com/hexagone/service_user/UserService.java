@@ -6,6 +6,7 @@ import java.util.UUID;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.mindrot.jbcrypt.BCrypt;
 
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
@@ -39,10 +40,11 @@ public class UserService {
             .onFailure(Throwable::printStackTrace);
     }
 
-    public Future<User> createUser(String name, String email) {
+    public Future<User> createUser(String name, String email, String password) {
         String id = UUID.randomUUID().toString();
-        return client.preparedQuery("INSERT INTO users (id, name, email) VALUES ($1, $2, $3) RETURNING *")
-            .execute(Tuple.of(id, name, email))
+        String hashedPassword = BCrypt.hashpw(password, BCrypt.gensalt());
+        return client.preparedQuery("INSERT INTO users (id, name, email, password) VALUES ($1, $2, $3, $4) RETURNING *")
+            .execute(Tuple.of(id, name, email, hashedPassword))
             .compose(rowSet -> {
                 if (rowSet.size() > 0) {
                     return Future.succeededFuture(toUser(rowSet.iterator().next()));
@@ -76,9 +78,10 @@ public class UserService {
             });
     }
 
-    public Future<User> updateUser(String id, String name, String email) {
-        return client.preparedQuery("UPDATE users SET name = $1, email = $2 WHERE id = $3 RETURNING *")
-            .execute(Tuple.of(name, email, id))
+    public Future<User> updateUser(String id, String name, String email, String password) {
+        String hashedPassword = BCrypt.hashpw(password, BCrypt.gensalt());
+        return client.preparedQuery("UPDATE users SET name = $1, email = $2, password = $3 WHERE id = $4 RETURNING *")
+            .execute(Tuple.of(name, email, hashedPassword, id))
             .compose(rowSet -> {
                 if (rowSet.size() > 0) {
                     return Future.succeededFuture(toUser(rowSet.iterator().next()));
@@ -89,6 +92,6 @@ public class UserService {
     }
 
     private User toUser(Row row) {
-        return new User(row.getUUID("id").toString(), row.getString("name"), row.getString("email"));
+        return new User(row.getUUID("id").toString(), row.getString("name"), row.getString("email"), row.getString("password"));
     }
 }

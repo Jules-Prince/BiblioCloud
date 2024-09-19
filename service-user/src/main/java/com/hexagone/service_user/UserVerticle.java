@@ -104,15 +104,16 @@ public class UserVerticle extends AbstractVerticle {
 
         String name = json.getString("name");
         String email = json.getString("email");
+        String password = json.getString("password");
 
-        if (name == null || email == null) {
-            logger.warn("Missing required fields: name or email");
-            routingContext.response().setStatusCode(400).end("Name and email are required");
+        if (name == null || email == null || password == null) {
+            logger.warn("Missing required fields: name, email, or password");
+            routingContext.response().setStatusCode(400).end("Name, email, and password are required");
             return;
         }
 
         logger.info("Creating user: name={}, email={}", name, email);
-        userService.createUser(name, email).onComplete(ar -> {
+        userService.createUser(name, email, password).onComplete(ar -> {
             if (ar.succeeded()) {
                 User createdUser = ar.result();
                 logger.info("User created successfully: id={}", createdUser.getId());
@@ -122,6 +123,40 @@ public class UserVerticle extends AbstractVerticle {
             } else {
                 logger.error("Failed to create user", ar.cause());
                 routingContext.response().setStatusCode(500).end(ar.cause().getMessage());
+            }
+        });
+    }
+
+    private void updateUser(RoutingContext routingContext) {
+        String id = routingContext.request().getParam("id");
+        logger.info("Received request to update user with id: {}", id);
+
+        JsonObject json = routingContext.body().asJsonObject();
+        if (json == null) {
+            logger.warn("Invalid JSON body received for updating user with id: {}", id);
+            routingContext.response().setStatusCode(400).end("Invalid JSON body");
+            return;
+        }
+
+        String name = json.getString("name");
+        String email = json.getString("email");
+        String password = json.getString("password");
+        if (name == null || email == null || password == null) {
+            logger.warn("Missing required fields (name, email, or password) for updating user with id: {}", id);
+            routingContext.response().setStatusCode(400).end("Name, email, and password are required");
+            return;
+        }
+
+        logger.info("Updating user with id: {}, new name: {}, new email: {}", id, name, email);
+        userService.updateUser(id, name, email, password).onComplete(ar -> {
+            if (ar.succeeded()) {
+                logger.info("Successfully updated user with id: {}", id);
+                routingContext.response()
+                    .putHeader("content-type", "application/json")
+                    .end(Json.encodePrettily(ar.result()));
+            } else {
+                logger.error("Failed to update user with id: {}. Error: {}", id, ar.cause().getMessage());
+                routingContext.response().setStatusCode(404).end(ar.cause().getMessage());
             }
         });
     }
@@ -156,39 +191,6 @@ public class UserVerticle extends AbstractVerticle {
             } else {
                 logger.error("Failed to retrieve all users. Error: {}", ar.cause().getMessage());
                 routingContext.response().setStatusCode(500).end(ar.cause().getMessage());
-            }
-        });
-    }
-
-    private void updateUser(RoutingContext routingContext) {
-        String id = routingContext.request().getParam("id");
-        logger.info("Received request to update user with id: {}", id);
-
-        JsonObject json = routingContext.body().asJsonObject();
-        if (json == null) {
-            logger.warn("Invalid JSON body received for updating user with id: {}", id);
-            routingContext.response().setStatusCode(400).end("Invalid JSON body");
-            return;
-        }
-
-        String name = json.getString("name");
-        String email = json.getString("email");
-        if (name == null || email == null) {
-            logger.warn("Missing required fields (name or email) for updating user with id: {}", id);
-            routingContext.response().setStatusCode(400).end("Name and email are required");
-            return;
-        }
-
-        logger.info("Updating user with id: {}, new name: {}, new email: {}", id, name, email);
-        userService.updateUser(id, name, email).onComplete(ar -> {
-            if (ar.succeeded()) {
-                logger.info("Successfully updated user with id: {}", id);
-                routingContext.response()
-                    .putHeader("content-type", "application/json")
-                    .end(Json.encodePrettily(ar.result()));
-            } else {
-                logger.error("Failed to update user with id: {}. Error: {}", id, ar.cause().getMessage());
-                routingContext.response().setStatusCode(404).end(ar.cause().getMessage());
             }
         });
     }
