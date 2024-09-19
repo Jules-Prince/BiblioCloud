@@ -66,7 +66,6 @@ public class UserVerticle extends AbstractVerticle {
     }
 
     private void setupService(JsonObject config, Promise<Void> startPromise) {
-       logger.info(config.toString());
         userService = new UserService(vertx, config);
 
         int httpPort = Integer.parseInt(config.getString("http.port", "8888"));
